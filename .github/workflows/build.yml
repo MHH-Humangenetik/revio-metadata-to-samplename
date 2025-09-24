@@ -103,13 +103,12 @@ jobs:
             ghcr.io/mhh-humangenetik/revio-metadata-to-samplename
           # prefix on ubuntu images
           flavor: |
-            prefix=${{ matrix.target == 'ubuntu' && 'ubuntu-' || '' }}
+            prefix=${{ matrix.target == 'ubuntu' && 'ubuntu-' || '' }},onlatest=true
             latest=auto
           # generate Docker tags based on the following events/attributes
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=raw,value=${{ matrix.target == 'ubuntu' && 'ubuntu-' || '' }}latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
