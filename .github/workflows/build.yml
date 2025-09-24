@@ -90,6 +90,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     name: Build and Push Docker Image
+    strategy:
+      matrix:
+        target: [base, ubuntu]
     steps:
       - name: Docker meta
         id: meta
@@ -98,6 +101,10 @@ jobs:
           # list of Docker images to use as base name for tags
           images: |
             ghcr.io/mhh-humangenetik/revio-metadata-to-samplename
+          # prefix on ubuntu images
+          flavor: |
+            prefix=${{ matrix.target == 'ubuntu' && 'ubuntu-' || '' }}
+            latest=auto
           # generate Docker tags based on the following events/attributes
           tags: |
             type=ref,event=branch
@@ -125,6 +132,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
+          target: ${{ matrix.target }}
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}

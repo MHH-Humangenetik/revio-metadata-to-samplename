@@ -10,7 +10,12 @@ RUN mkdir -p build && \
     go mod download && \
     CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -a -ldflags '-extldflags "-static"' -v -o /app/build/revio-metadata-to-samplename
 
-FROM scratch
+FROM scratch AS base
+COPY --from=build /app/build/revio-metadata-to-samplename /revio-metadata-to-samplename
+WORKDIR /
+ENTRYPOINT ["/revio-metadata-to-samplename"]
+
+FROM ubuntu:24.04 AS ubuntu
 COPY --from=build /app/build/revio-metadata-to-samplename /revio-metadata-to-samplename
 WORKDIR /
 ENTRYPOINT ["/revio-metadata-to-samplename"]
