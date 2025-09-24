@@ -1,0 +1,88 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  # Allow manual triggers
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.25.1'
+        check-latest: true
+
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Get dependencies
+      run: go mod download
+
+    - name: Run tests
+      run: go test -v ./...
+
+  build:
+    name: Build
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+        exclude:
+          - goarch: arm64
+            goos: windows
+
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.21'
+        check-latest: true
+
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Get dependencies
+      run: go mod download
+
+    - name: Build
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+      run: |
+        # Create build directory
+        mkdir -p build
+        
+        # Set binary extension based on OS
+        if [ "${{ matrix.goos }}" = "windows" ]; then
+          BINARY_NAME=revio-metadata-to-samplename.exe
+        else
+          BINARY_NAME=revio-metadata-to-samplename
+        fi
+        
+        # Build the binary
+        go build -v -o "build/${{ matrix.goos }}-${{ matrix.goarch }}/${BINARY_NAME}" .
+        
+        # Create archive with README and LICENSE
+        if [ "${{ matrix.goos }}" = "windows" ]; then
+          zip -j "revio-metadata-to-samplename_${{ matrix.goos }}-${{ matrix.goarch }}.zip" "build/${{ matrix.goos }}-${{ matrix.goarch }}/${BINARY_NAME}" README.md LICENSE
+        else
+          # For tar, we need to handle the directory structure differently
+          cp README.md LICENSE "build/${{ matrix.goos }}-${{ matrix.goarch }}/"
+          tar -czf "revio-metadata-to-samplename_${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz" -C build/${{ matrix.goos }}-${{ matrix.goarch }} "${BINARY_NAME}" README.md LICENSE
+        fi
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: revio-metadata-to-samplename-_${{ matrix.goos }}-${{ matrix.goarch }}
+        path: |
+          revio-metadata-to-samplename_${{ matrix.goos }}-${{ matrix.goarch }}.*
